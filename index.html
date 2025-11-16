@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SlotSwapper — Real-time</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa7b2; --accent1:#06b6d4; --accent2:#f59e0b; --pill:#0ea5a7;
+      --glass: rgba(255,255,255,0.03);
+    }
+    body{font-family:Inter,system-ui,Arial; margin:0; background:linear-gradient(180deg,var(--bg),#071024); color:#e6eef6}
+    header{background:linear-gradient(90deg,var(--accent1),var(--accent2)); color:#021017; padding:14px 20px}
+    .wrap{max-width:1100px;margin:20px auto;padding:18px}
+    nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .nav-left{display:flex;align-items:center;gap:16px}
+    .logo{font-weight:800;letter-spacing:0.6px}
+    .nav-links{display:flex;gap:10px}
+    .nav-links button{background:transparent;border:none;color:inherit;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .nav-links button.active{background:var(--glass);box-shadow:0 8px 24px rgba(2,6,23,0.6)}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    input,select,button,textarea{font-size:14px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    button{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#021017;border:none;cursor:pointer;padding:8px 12px;border-radius:10px}
+    button.ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04)}
+    .muted{color:var(--muted);font-size:13px}
+    ul.list{list-style:none;padding:0;margin:0}
+    li.item{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+    .small{font-size:13px;color:var(--muted)}
+    .badge{padding:6px 8px;border-radius:999px;font-size:12px;background:rgba(14,165,167,0.12);color:var(--pill)}
+    .center{display:flex;align-items:center;gap:12px}
+    .col{display:flex;flex-direction:column;gap:8px}
+    .row{display:flex;gap:8px;align-items:center}
+    .note{font-size:13px;color:#bcd}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav>
+        <div class="nav-left">
+          <div class="logo">SlotSwapper</div>
+          <div class="small">swap time, not plans</div>
+        </div>
+        <div class="nav-links" id="mainNav">
+          <button data-tab="auth" class="active">Auth</button>
+          <button data-tab="dashboard">Dashboard</button>
+          <button data-tab="marketplace">Marketplace</button>
+          <button data-tab="requests">Requests</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- AUTH -->
+    <div id="auth" class="card">
+      <div class="grid-2">
+        <div>
+          <h3>Signup</h3>
+          <div class="col">
+            <input id="su_name" placeholder="Full name (e.g., Alice)" />
+            <input id="su_email" placeholder="Email (e.g., alice@x.com)" />
+            <input id="su_password" placeholder="Password" type="password" />
+            <div style="display:flex;gap:8px">
+              <button id="btnSignup">Create account</button>
+              <button class="ghost" id="btnSeed">Seed demo users</button>
+            </div>
+            <div class="muted small">Tip: Create two users to simulate swaps (Alice, Bob).</div>
+          </div>
+        </div>
+
+        <div>
+          <h3>Login</h3>
+          <div class="col">
+            <input id="li_email" placeholder="Email" />
+            <input id="li_password" placeholder="Password" type="password" />
+            <div style="display:flex;gap:8px">
+              <button id="btnLogin">Login</button>
+              <button class="ghost" id="btnLogout">Logout</button>
+            </div>
+            <div class="muted small">After login, switch to Dashboard to create events.</div>
+          </div>
+        </div>
+      </div>
+      <hr style="margin:16px 0;border:none;border-top:1px solid rgba(255,255,255,0.04)" />
+      <div class="note">Current session: <span id="sessionInfo">— no user logged in —</span></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <h3>My Events</h3>
+          <form id="createEventForm" class="col">
+            <input id="ev_title" placeholder="Title (e.g., Team Meeting)" required />
+            <label class="small">Start <input id="ev_start" type="datetime-local" required /></label>
+            <label class="small">End <input id="ev_end" type="datetime-local" required /></label>
+            <div style="display:flex;gap:8px">
+              <button>Create event</button>
+              <button type="button" class="ghost" id="btnRandom">Quick sample</button>
+            </div>
+          </form>
+          <hr />
+          <ul id="myEvents" class="list"></ul>
+        </div>
+
+        <div class="card">
+          <h3>Summary</h3>
+          <div class="col">
+            <div class="row"><strong id="stats_total">0</strong><span class="small"> total events</span></div>
+            <div class="row"><span class="badge" id="stats_swappable">0 swappable</span></div>
+            <div><p class="muted small">Make an event SWAPPABLE to make it appear in Marketplace for others to request.</p></div>
+            <div style="margin-top:8px"><button id="gotoMarketplace">Go to Marketplace</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETPLACE -->
+    <div id="marketplace" style="display:none" class="card">
+      <h3>Marketplace — Available Swappable Slots</h3>
+      <div class="muted small">These are other users' slots (not your own).</div>
+      <ul id="marketList" class="list" style="margin-top:12px"></ul>
+    </div>
+
+    <!-- REQUESTS -->
+    <div id="requests" style="display:none" class="card">
+      <h3>Swap Requests</h3>
+      <div class="grid-2">
+        <div>
+          <h4>Incoming Requests</h4>
+          <div class="muted small">Requests from others to swap for one of your slots.</div>
+          <ul id="incomingList" class="list" style="margin-top:10px"></ul>
+        </div>
+
+        <div>
+          <h4>Outgoing Requests</h4>
+          <div class="muted small">Requests you made to others.</div>
+          <ul id="outgoingList" class="list" style="margin-top:10px"></ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- socket.io client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    // ====== CONFIG ======
+    // If your server runs on a different host/port, change this.
+    const API_BASE = (location.protocol + '//' + location.hostname + ':4000') + '/api';
+    const SOCKET_URL = location.hostname + ':4000';
+
+    // ====== State ======
+    let session = null; // { id, name, email }
+    const socket = io(SOCKET_URL);
+
+    // Simple in-memory caches (keeps UI snappy)
+    let CACHE = { users: [], events: [], swaps: [] };
+
+    socket.on('connect', ()=> console.log('socket connected', socket.id));
+    socket.on('eventsUpdated', ()=> fetchAndRender());
+    socket.on('swapsUpdated', ()=> fetchAndRender());
+
+    // ====== Helpers ======
+    function goTab(t){
+      document.querySelectorAll('.nav-links button').forEach(b => b.classList.toggle('active', b.dataset.tab===t));
+      showTab(t);
+    }
+    function showTab(t){
+      ['auth','dashboard','marketplace','requests'].forEach(k => {
+        const el = document.getElementById(k);
+        el.style.display = (k === t ? (k==='auth'?'block':'block') : 'none');
+      });
+      renderAll();
+    }
+    function fmt(dt){ return new Date(dt).toLocaleString(); }
+    function uid(){ return Date.now() + Math.floor(Math.random()*999); }
+
+    // ====== Attach nav handlers ======
+    document.getElementById('mainNav').addEventListener('click', (e)=>{
+      const b = e.target.closest('button');
+      if(!b) return;
+      goTab(b.dataset.tab);
+    });
+
+    // ====== Auth actions ======
+    document.getElementById('btnSignup').addEventListener('click', async ()=>{
+      const name = document.getElementById('su_name').value.trim();
+      const email = document.getElementById('su_email').value.trim();
+      const password = document.getElementById('su_password').value;
+      if(!name || !email || !password) return alert('fill fields');
+      const res = await fetch(API_BASE + '/auth/signup', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, email, password })
+      });
+      const j = await res.json();
+      if(res.ok){
+        loginUser(j.user);
+      } else {
+        alert(j.error || 'signup failed');
+      }
+    });
+
+    document.getElementById('btnLogin').addEventListener('click', async ()=>{
+      const email = document.getElementById('li_email').value.trim();
+      const password = document.getElementById('li_password').value;
+      if(!email||!password) return alert('fill fields');
+      const res = await fetch(API_BASE + '/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password })
+      });
+      const j = await res.json();
+      if(res.ok){
+        loginUser(j.user);
+      } else {
+        alert(j.error || 'login failed');
+      }
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', ()=>{
+      logout();
+    });
+
+    function loginUser(u){
+      session = u;
+      document.getElementById('sessionInfo').innerText = `${u.name} (${u.email})`;
+      goTab('dashboard');
+      socket.emit('join', u.id); // join personal room optionally
+      fetchAndRender();
+    }
+    function logout(){
+      session = null;
+      document.getElementById('sessionInfo').innerText = '— no user logged in —';
+      goTab('auth');
+      fetchAndRender();
+    }
+
+    // seed demo: creates two demo users + events via API
+    document.getElementById('btnSeed').addEventListener('click', async ()=>{
+      // This is a convenience client-side seed (no auth) that calls server to create users & events.
+      // For simplicity, we'll create users in-memory on client by calling signup endpoint twice,
+      // and then create events using the returned user ids.
+      try {
+        const a = await fetch(API_BASE + '/auth/signup', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name:'Alice', email:'alice@x.com', password:'alicepw' })
+        }).then(r=>r.json());
+        const b = await fetch(API_BASE + '/auth/signup', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name:'Bob', email:'bob@x.com', password:'bobpw' })
+        }).then(r=>r.json());
+
+        // create events
+        const now = Date.now();
+        if(a.user){
+          await fetch(API_BASE + '/events', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ title:'Team Meeting', start: now + 86400000, end: now + 86400000 + 3600000, ownerId: a.user.id }) });
+        }
+        if(b.user){
+          await fetch(API_BASE + '/events', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ title:'Focus Block', start: now + 2*86400000, end: now + 2*86400000 + 3600000, ownerId: b.user.id }) });
+        }
+        // one busy event
+        if(a.user){
+          await fetch(API_BASE + '/events', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ title:"1:1 with Lead", start: now + 3*86400000, end: now + 3*86400000 + 3600000, ownerId: a.user.id }) });
+        }
+        alert('Demo seeded.');
+        fetchAndRender();
+      } catch (err) {
+        console.error(err);
+        alert('seeding failed');
+      }
+    });
+
+    // ====== Events (client-side) ======
+    document.getElementById('createEventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if(!session) return alert('login first');
+      const title = document.getElementById('ev_title').value.trim();
+      const start = document.getElementById('ev_start').value;
+      const end = document.getElementById('ev_end').value;
+      if(!title||!start||!end) return alert('fill fields');
+      const res = await fetch(API_BASE + '/events', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ title, start: new Date(start).getTime(), end: new Date(end).getTime(), ownerId: session.id })
+      });
+      if(res.ok){
+        document.getElementById('createEventForm').reset();
+        fetchAndRender();
+      } else {
+        alert('create failed');
+      }
+    });
+
+    document.getElementById('btnRandom').addEventListener('click', async ()=>{
+      if(!session) return alert('login first');
+      const start = Date.now() + (Math.floor(Math.random()*5)+1)*86400000;
+      await fetch(API_BASE + '/events', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ title:'Quick ' + Math.floor(Math.random()*100), start, end: start+3600000, ownerId: session.id }) });
+      fetchAndRender();
+    });
+
+    document.getElementById('gotoMarketplace').addEventListener('click', ()=> goTab('marketplace'));
+
+    // ====== Marketplace / Swap actions ======
+    async function requestSwap(theirEventId){
+      if(!session) return alert('login first');
+      // fetch my swappable events
+      const myEvents = CACHE.events.filter(e => e.ownerId === session.id && e.status === 'SWAPPABLE');
+      if(myEvents.length === 0){
+        alert('make one of your events SWAPPABLE first (in Dashboard)');
+        return;
+      }
+      // For simplicity ask for id via prompt
+      const opt = myEvents.map(m => `${m._id} — ${m.title}`).join('\n');
+      const pick = prompt('Choose your swappable event ID to offer:\n' + opt);
+      if(!pick) return;
+      const myId = pick.trim();
+      const res = await fetch(API_BASE + '/swaps', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ requesterId: session.id, myEventId: myId, theirEventId })
+      });
+      if(res.ok) {
+        alert('Swap request sent (pending).');
+        fetchAndRender();
+      } else {
+        const j = await res.json();
+        alert(j.error || 'request failed');
+      }
+    }
+
+    async function respondSwap(reqId, accept){
+      if(!session) return alert('login first');
+      const res = await fetch(API_BASE + '/swaps/' + reqId + '/respond', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ accept })
+      });
+      if(res.ok){
+        alert(accept ? 'Accepted' : 'Rejected');
+        fetchAndRender();
+      } else {
+        alert('respond failed');
+      }
+    }
+
+    async function toggleSwappable(evId){
+      // toggle status on server
+      const ev = CACHE.events.find(x=>x._id===evId);
+      if(!ev) return;
+      if(ev.ownerId !== session?.id) return alert('you do not own this');
+      const newStatus = ev.status === 'SWAPPABLE' ? 'BUSY' : 'SWAPPABLE';
+      await fetch(API_BASE + '/events/' + evId + '/status', {
+        method: 'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus })
+      });
+      fetchAndRender();
+    }
+
+    async function deleteEvent(evId){
+      if(!confirm('Delete?')) return;
+      await fetch(API_BASE + '/events/' + evId, { method: 'DELETE' });
+      fetchAndRender();
+    }
+
+    // ====== Fetch & Render ======
+    async function fetchAll(){
+      const [evRes, swRes] = await Promise.all([
+        fetch(API_BASE + '/events'),
+        fetch(API_BASE + '/swaps')
+      ]);
+      const events = await evRes.json();
+      const swaps = await swRes.json();
+      CACHE.events = events;
+      CACHE.swaps = swaps;
+      return { events, swaps };
+    }
+
+    function renderAll(){
+      renderSession();
+      renderMyEvents();
+      renderStats();
+      renderMarketplace();
+      renderRequests();
+    }
+
+    function renderSession(){
+      document.getElementById('sessionInfo').innerText = session ? `${session.name} (${session.email})` : '— no user logged in —';
+    }
+
+    function renderMyEvents(){
+      const ul = document.getElementById('myEvents');
+      ul.innerHTML = '';
+      if(!session){ ul.innerHTML = '<div class="muted small">Login to manage events</div>'; return; }
+      const mine = CACHE.events.filter(e=>String(e.ownerId)===String(session.id)).sort((a,b)=>a.start-b.start);
+      mine.forEach(ev=>{
+        const li = document.createElement('li'); li.className='item';
+        const left = document.createElement('div');
+        left.innerHTML = `<div><strong>${ev.title}</strong> <span class="small">(${fmt(ev.start)})</span></div>
+          <div class="small">Status: <span class="badge">${ev.status}</span></div>`;
+        const right = document.createElement('div'); right.className='row';
+        const tbtn = document.createElement('button'); tbtn.className='ghost'; tbtn.textContent = ev.status==='SWAPPABLE' ? 'Unmark' : 'Make Swappable';
+        tbtn.onclick = ()=>toggleSwappable(ev._id);
+        const del = document.createElement('button'); del.textContent='Delete'; del.onclick=()=>deleteEvent(ev._id);
+        right.appendChild(tbtn); right.appendChild(del);
+        li.appendChild(left); li.appendChild(right);
+        ul.appendChild(li);
+      });
+      if(mine.length===0) ul.innerHTML = '<div class="muted small">No events yet</div>';
+    }
+
+    function renderStats(){
+      const total = CACHE.events.filter(e=>String(e.ownerId)===String(session?.id)).length;
+      const sw = CACHE.events.filter(e=>String(e.ownerId)===String(session?.id) && e.status==='SWAPPABLE').length;
+      document.getElementById('stats_total').innerText = total;
+      document.getElementById('stats_swappable').innerText = `${sw} swappable`;
+    }
+
+    function renderMarketplace(){
+      const ul = document.getElementById('marketList');
+      ul.innerHTML = '';
+      if(!session) { ul.innerHTML = '<div class="muted small">Login to view marketplace</div>'; return; }
+      const slots = CACHE.events.filter(e=>e.status==='SWAPPABLE' && String(e.ownerId)!==String(session.id)).sort((a,b)=>a.start-b.start);
+      slots.forEach(s=>{
+        const li = document.createElement('li'); li.className='item';
+        // show owner name if we can (not fetching users separately in this minimal example)
+        li.innerHTML = `<div><strong>${s.title}</strong><div class="small">${fmt(s.start)} — ${fmt(s.end)}</div></div>
+          <div class="center"><div class="small">By: ${s.ownerId}</div></div>`;
+        const btn = document.createElement('button'); btn.textContent='Request Swap'; btn.onclick = ()=>requestSwap(s._id);
+        li.appendChild(btn);
+        ul.appendChild(li);
+      });
+      if(slots.length===0) ul.innerHTML = '<div class="muted small">No swappable slots available right now</div>';
+    }
+
+    function renderRequests(){
+      const incUl = document.getElementById('incomingList');
+      const outUl = document.getElementById('outgoingList');
+      incUl.innerHTML = ''; outUl.innerHTML = '';
+      if(!session){ incUl.innerHTML = '<div class="muted small">Login to view requests</div>'; outUl.innerHTML=''; return; }
+
+      const incoming = CACHE.swaps.filter(s=>{
+        const theirEv = CACHE.events.find(e=>String(e._id)===String(s.theirEventId));
+        return theirEv && String(theirEv.ownerId)===String(session.id);
+      });
+      incoming.forEach(r=>{
+        const requester = r.requesterId;
+        const myEv = CACHE.events.find(e=>String(e._id)===String(r.theirEventId));
+        const theirEv = CACHE.events.find(e=>String(e._id)===String(r.myEventId));
+        const li = document.createElement('li'); li.className='item';
+        li.innerHTML = `<div><div><strong>${requester}</strong> requests your <strong>${myEv?.title}</strong> offering <em>${theirEv?.title}</em></div>
+          <div class="small">Status: ${r.status}</div></div>`;
+        const acc = document.createElement('button'); acc.textContent='Accept'; acc.onclick=()=>respondSwap(r._id,true);
+        const rej = document.createElement('button'); rej.className='ghost'; rej.textContent='Reject'; rej.onclick=()=>respondSwap(r._id,false);
+        const box = document.createElement('div'); box.className='row'; box.appendChild(acc); box.appendChild(rej);
+        li.appendChild(box);
+        incUl.appendChild(li);
+      });
+      if(incoming.length===0) incUl.innerHTML = '<div class="muted small">No incoming requests</div>';
+
+      const outgoing = CACHE.swaps.filter(s=>String(s.requesterId)===String(session.id));
+      outgoing.forEach(r=>{
+        const theirEv = CACHE.events.find(e=>String(e._id)===String(r.theirEventId));
+        const myEv = CACHE.events.find(e=>String(e._id)===String(r.myEventId));
+        const li = document.createElement('li'); li.className='item';
+        li.innerHTML = `<div><div>You offered <strong>${myEv?.title}</strong> for <strong>${theirEv?.title}</strong></div><div class="small">Status: ${r.status}</div></div>`;
+        outUl.appendChild(li);
+      });
+      if(outgoing.length===0) outUl.innerHTML = '<div class="muted small">No outgoing requests</div>';
+    }
+
+    // fetch data and update UI
+    async function fetchAndRender(){
+      await fetchAll();
+      renderAll();
+    }
+
+    // bootstrap
+    fetchAndRender();
+    goTab('auth'); // start on auth tab
+  </script>
+</body>
+</html>
